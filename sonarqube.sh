@@ -12,11 +12,17 @@ sudo apt-get install postgresql postgresql-contrib -y
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
 
+# Before PostgreSQL commands
+pushd /tmp > /dev/null
+
 # Create SonarQube Database and User
 echo "Creating SonarQube database and user..."
 sudo -u postgres psql -c "CREATE USER sonar WITH ENCRYPTED PASSWORD 'sonar';"
 sudo -u postgres psql -c "CREATE DATABASE sonarqube OWNER sonar;"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE sonarqube TO sonar;"
+
+# After PostgreSQL commands
+popd > /dev/null
 
 # Download SonarQube
 echo "Downloading SonarQube..."
