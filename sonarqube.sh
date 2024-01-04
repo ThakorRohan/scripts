@@ -47,6 +47,14 @@ sudo unzip sonarqube-10.3.0.82913.zip -d /opt
 # Rename SonarQube directory
 sudo mv /opt/sonarqube-10.3.0.82913 /opt/sonarqube
 
+# Create sonar user and group
+echo "Creating sonar user and group..."
+sudo groupadd sonar
+sudo useradd -c "User for SonarQube service" -d /opt/sonarqube -g sonar -s /bin/bash sonar
+
+# Set the correct permissions
+sudo chown -R sonar:sonar /opt/sonarqube
+
 # Configure SonarQube
 # Update the sonar.properties file for database configuration
 echo "Configuring SonarQube..."
