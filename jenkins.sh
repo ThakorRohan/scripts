@@ -6,7 +6,7 @@ sudo apt-get update -y && sudo apt-get upgrade -y
 
 # Install Java
 echo "Installing Java..."
-sudo apt install fontconfig openjdk-17-jre
+sudo apt install -y fontconfig openjdk-17-jre
 java -version
 
 # Add Jenkins Repository
@@ -29,6 +29,19 @@ sudo apt-get install jenkins -y
 echo "Starting Jenkins..."
 sudo systemctl start jenkins
 sudo systemctl enable jenkins
+
+# Install Docker
+echo "Installing Docker..."
+sudo apt install -y docker.io
+
+# Add Jenkins user to Docker group
+echo "Adding Jenkins user to Docker group..."
+sudo usermod -aG docker root
+sudo usermod -aG docker jenkins
+
+# Restart Jenkins to apply changes
+echo "Restarting Jenkins..."
+sudo systemctl restart jenkins
 
 # Output the Jenkins secret password
 echo "Installation completed. The Jenkins initial admin password is:"
