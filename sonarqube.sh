@@ -4,88 +4,32 @@
 echo "Updating and upgrading the system..."
 sudo apt-get update -y && sudo apt-get upgrade -y
 
-# Remove existing SonarQube installation (if any)
-echo "Checking for existing SonarQube installation..."
-if [ -d "/opt/sonarqube" ]; then
-    echo "Removing existing SonarQube installation..."
-    sudo systemctl stop sonarqube
-    sudo rm -rf /opt/sonarqube
-    sudo rm /etc/systemd/system/sonarqube.service
-    sudo systemctl daemon-reload
-fi
+# Install Docker if not already installed
+echo "Installing Docker..."
+sudo apt install docker.io -y
 
-# Install PostgreSQL
-echo "Installing PostgreSQL..."
-sudo apt-get install postgresql postgresql-contrib -y
+# Start and enable Docker service
+sudo systemctl start docker
+sudo systemctl enable docker
 
-# Start PostgreSQL service
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+# Create Docker volumes for SonarQube data and extensions
+echo "Creating Docker volumes for SonarQube..."
+sudo docker volume create sonarqube_data
+sudo docker volume create sonarqube_extensions
 
-# Before PostgreSQL commands
-pushd /tmp > /dev/null
+# Run SonarQube Docker container
+echo "Starting SonarQube Docker container..."
+sudo docker run -d --name sonarqube \
+  -p 9000:9000 \
+  -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true \
+  -v sonarqube_data:/opt/sonarqube/data \
+  -v sonarqube_extensions:/opt/sonarqube/extensions \
+  sonarqube:latest
 
-# Create SonarQube Database and User
-echo "Creating SonarQube database and user..."
-sudo -u postgres psql -c "CREATE USER sonar WITH ENCRYPTED PASSWORD 'sonar';"
-sudo -u postgres psql -c "CREATE DATABASE sonarqube OWNER sonar;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE sonarqube TO sonar;"
+# Install Sonar-Scanner (local analysis tool)
+echo "Installing Sonar-Scanner..."
+wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.6.2.2472-linux.zip
+sudo unzip sonar-scanner-cli-4.6.2.2472-linux.zip -d /opt
+sudo ln -s /opt/sonar-scanner-4.6.2.2472-linux/bin/sonar-scanner /usr/bin/sonar-scanner
 
-# After PostgreSQL commands
-popd > /dev/null
-
-# Download SonarQube
-echo "Downloading SonarQube..."
-wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-10.3.0.82913.zip
-
-# Install Unzip
-sudo apt-get install unzip -y
-
-# Unzip SonarQube
-sudo unzip sonarqube-10.3.0.82913.zip -d /opt
-
-# Rename SonarQube directory
-sudo mv /opt/sonarqube-10.3.0.82913 /opt/sonarqube
-
-# Create sonar user and group
-echo "Creating sonar user and group..."
-sudo groupadd sonar
-sudo useradd -c "User for SonarQube service" -d /opt/sonarqube -g sonar -s /bin/bash sonar
-
-# Set the correct permissions
-sudo chown -R sonar:sonar /opt/sonarqube
-
-# Configure SonarQube
-# Update the sonar.properties file for database configuration
-echo "Configuring SonarQube..."
-sudo sed -i 's/#sonar.jdbc.username=/sonar.jdbc.username=sonar/' /opt/sonarqube/conf/sonar.properties
-sudo sed -i 's/#sonar.jdbc.password=/sonar.jdbc.password=sonar/' /opt/sonarqube/conf/sonar.properties
-sudo sed -i 's/#sonar.jdbc.url=jdbc:postgresql:\/\/localhost\/sonarqube/sonar.jdbc.url=jdbc:postgresql:\/\/localhost\/sonarqube/' /opt/sonarqube/conf/sonar.properties
-
-# Add Systemd service for SonarQube
-echo "Creating Systemd service for SonarQube..."
-echo "[Unit]
-Description=SonarQube service
-After=syslog.target network.target
-
-[Service]
-Type=simple
-User=sonar
-Group=sonar
-PermissionsStartOnly=true
-ExecStart=/opt/sonarqube/bin/linux-x86-64/sonar.sh start
-ExecStop=/opt/sonarqube/bin/linux-x86-64/sonar.sh stop
-Restart=always
-
-[Install]
-WantedBy=multi-user.target" | sudo tee /etc/systemd/system/sonarqube.service
-
-# Reload Systemd
-sudo systemctl daemon-reload
-
-# Start SonarQube
-echo "Starting SonarQube..."
-sudo systemctl start sonarqube
-sudo systemctl enable sonarqube
-
-echo "SonarQube installation and configuration completed."
+echo "SonarQube and Sonar-Scanner installation completed."
