@@ -4,6 +4,16 @@
 echo "Updating and upgrading the system..."
 sudo apt-get update -y && sudo apt-get upgrade -y
 
+# Remove existing SonarQube installation (if any)
+echo "Checking for existing SonarQube installation..."
+if [ -d "/opt/sonarqube" ]; then
+    echo "Removing existing SonarQube installation..."
+    sudo systemctl stop sonarqube
+    sudo rm -rf /opt/sonarqube
+    sudo rm /etc/systemd/system/sonarqube.service
+    sudo systemctl daemon-reload
+fi
+
 # Install PostgreSQL
 echo "Installing PostgreSQL..."
 sudo apt-get install postgresql postgresql-contrib -y
