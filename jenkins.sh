@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Variables for Jenkins admin user
+JENKINS_ADMIN_USER="admin"
+JENKINS_ADMIN_PASS="22012006@Rr"
+
 # Updating and Upgrading dependencies
 echo "Updating and Upgrading dependencies..."
 sudo apt-get update -y && sudo apt-get upgrade -y
@@ -42,6 +46,31 @@ sudo usermod -aG docker jenkins
 # Restart Jenkins to apply changes
 echo "Restarting Jenkins..."
 sudo systemctl restart jenkins
+
+# Create the Groovy script for adding the Jenkins admin user
+cat <<EOF > create_jenkins_admin.groovy
+import jenkins.model.*
+import hudson.security.*
+
+def jenkinsInstance = Jenkins.getInstance()
+def hudsonRealm = new HudsonPrivateSecurityRealm(false)
+
+hudsonRealm.createAccount("$JENKINS_ADMIN_USER", "$JENKINS_ADMIN_PASS")
+jenkinsInstance.setSecurityRealm(hudsonRealm)
+jenkinsInstance.save()
+EOF
+
+# Wait for Jenkins to start
+echo "Waiting for Jenkins to start..."
+while ! curl --output /dev/null --silent --head --fail http://localhost:8080; do
+    printf '.'
+    sleep 5
+done
+echo "Jenkins started."
+
+# Run the Groovy script to create the Jenkins admin user
+echo "Creating admin user in Jenkins..."
+sudo java -jar /var/cache/jenkins/war/WEB-INF/jenkins-cli.jar -s http://localhost:8080/ groovy = < create_jenkins_admin.groovy
 
 # Output the Jenkins secret password
 echo "Installation completed. The Jenkins initial admin password is:"
