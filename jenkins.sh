@@ -23,7 +23,9 @@ then
     # Update and Install Prerequisites
     log_info "Updating package list and installing prerequisites."
     sudo apt-get update
+    sudo apt-get install needrestart
     sudo apt-get install -y python3 curl
+    sudo needrestart -r a
 
     # Install Java
     log_info "Installing Java."
